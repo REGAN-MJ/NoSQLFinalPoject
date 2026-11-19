@@ -60,6 +60,7 @@ let database;
 
 // Parse JSON requests, keep login sessions, serve the browser app, and make MongoDB available to routes.
 app.use(express.json({ limit: "30kb" }));
+app.set("trust proxy", 1);
 app.use(session({
   name: "academic.sid",
   secret: process.env.SESSION_SECRET || "development-only-change-this-session-secret",
