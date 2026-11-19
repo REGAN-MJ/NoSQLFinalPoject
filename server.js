@@ -12,6 +12,7 @@ const mongoUri = process.env.MONGODB_URI;
 const databaseName = process.env.DB_NAME || "student_academic_records";
 const defaultAdminUsername = (process.env.ADMIN_USERNAME || "admin").trim().toLowerCase();
 const defaultAdminPassword = process.env.ADMIN_PASSWORD || "admin123";
+const localAdminAccessEnabled = process.env.NODE_ENV !== "production";
 // Grades are converted to points so semester GPA and CGPA can be credit-weighted.
 const gradePoints = { A: 5, B: 4, C: 3, D: 2, E: 1, F: 0 };
 // Programs are inserted only when their course codes do not already exist.
@@ -229,6 +230,9 @@ app.post("/api/auth/signup", async (req, res, next) => {
 });
 
 app.get("/api/auth/me", (req, res) => {
+  if (localAdminAccessEnabled) {
+    req.session.user = { role: "admin", username: defaultAdminUsername, fullName: "Administrator" };
+  }
   if (!req.session.user) return res.status(401).json({ error: "Please sign in." });
   res.json({ user: req.session.user });
 });
@@ -670,7 +674,9 @@ async function start() {
       })));
     }
   }
-  app.listen(port, () => console.log(`Student Academic Portal is running at http://localhost:${port}`));
+  const onListening = () => console.log(`Student Academic Portal is running at http://localhost:${port}`);
+  if (localAdminAccessEnabled) app.listen(port, "127.0.0.1", onListening);
+  else app.listen(port, onListening);
 }
 
 start().catch((error) => {

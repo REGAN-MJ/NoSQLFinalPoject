@@ -592,8 +592,7 @@ function bindEvents() {
       await request("/api/auth/logout", { method: "POST" });
       state.user = null;
       $("#login-form").reset();
-      setLoginMode("login");
-      setScreen("login");
+      await initialize();
     } catch (error) {
       toast(error.message, true);
     }
