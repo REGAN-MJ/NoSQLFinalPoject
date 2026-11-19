@@ -17,11 +17,11 @@
       <div class="login-card">
         <a class="brand login-brand" href="#"><span class="brand-mark">C</span><span>campus<span class="brand-light">desk</span></span></a>
         <div class="eyebrow">UNIVERSITY ACADEMIC PORTAL</div>
-        <h1>Welcome back</h1>
-        <p class="page-subtitle">Sign in to view and manage academic records.</p>
-        <div class="login-tabs" role="tablist">
-          <button type="button" class="login-tab active" data-login-role="student">Student</button>
-          <button type="button" class="login-tab" data-login-role="admin">Administrator</button>
+        <h1 id="login-title">Welcome back</h1>
+        <p class="page-subtitle" id="login-subtitle">Sign in to view and manage academic records.</p>
+        <div class="login-tabs" id="login-tabs" role="tablist" aria-label="Account role">
+          <button type="button" class="login-tab active" role="tab" aria-selected="true" data-login-role="student">Student</button>
+          <button type="button" class="login-tab" role="tab" aria-selected="false" data-login-role="admin">Administrator</button>
         </div>
         <form id="login-form">
           <label class="login-label" id="login-identifier-label" for="login-identifier">Registration number or email</label>
@@ -31,6 +31,20 @@
           <div class="form-error" id="login-error" role="alert"></div>
           <button class="button button-primary login-submit" id="login-submit" type="submit">Sign in</button>
         </form>
+        <form id="signup-form" hidden>
+          <label class="login-label" for="signup-name">Full name</label>
+          <input class="login-input" id="signup-name" name="fullName" autocomplete="name" maxlength="100" required placeholder="Your full name">
+          <label class="login-label" id="signup-identifier-label" for="signup-identifier">Registration number</label>
+          <input class="login-input" id="signup-identifier" name="identifier" autocomplete="username" required placeholder="e.g. STU001">
+          <label class="login-label" for="signup-password">Password</label>
+          <input class="login-input" id="signup-password" name="password" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters">
+          <label class="login-label" for="signup-confirm-password">Confirm password</label>
+          <input class="login-input" id="signup-confirm-password" name="confirmPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="Enter your password again">
+          <div class="form-error" id="signup-error" role="alert"></div>
+          <div class="login-success" id="signup-message" role="status" aria-live="polite"></div>
+          <button class="button button-primary login-submit" id="signup-submit" type="submit">Create account</button>
+        </form>
+        <button class="login-mode-toggle" id="login-mode-toggle" type="button">Create an account</button>
         <p class="login-hint" id="login-hint">Use your university registration number or email and password.</p>
       </div>
     </section>

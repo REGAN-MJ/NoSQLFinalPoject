@@ -7,13 +7,15 @@ A university academic portal built with HTML, CSS, JavaScript, Express, and Mong
 - Node.js 18 or newer
 - MongoDB locally, or a MongoDB Atlas connection string
 
-Install dependencies with `npm install`. Copy `.env.example` to `.env`, configure `MONGODB_URI`, then run:
+Install dependencies with `npm install`. Copy `.env.example` to `.env`, configure `MONGODB_URI` with your MongoDB Atlas database user's credentials, then run:
 
 ```bash
 npm start
 ```
 
 Open [http://localhost:3000](http://localhost:3000). For development, run `npm run dev`.
+
+In Atlas, add the machine running this application to the project's Network Access IP access list and ensure the database user has read/write access. Keep the real connection string in `.env`; do not commit it. The application uses the `student_academic_records` database by default and seeds its demo programs and course units on first startup.
 
 The application seeds the four requested programs the first time it connects:
 
@@ -26,15 +28,16 @@ The application seeds a suggested demo curriculum of three course units per seme
 
 ## Sign-in
 
-- **Administrator:** username `Admin`, password `Admin123` by default. Override with `ADMIN_USERNAME` and `ADMIN_PASSWORD`.
-- **Student:** registration number or email address and the password assigned when the student record is created. Student passwords are stored as bcrypt hashes.
+- **Administrator:** username `admin`, password `admin123` by default. The account is inserted into MongoDB on first startup with a bcrypt-hashed password. Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` before first startup to use different credentials; changing them after the account exists does not update it.
+- **Student:** registration number or email address and password. New student signups are held as pending profiles until an administrator completes their academic details; pending accounts cannot sign in. Student passwords are stored as bcrypt hashes.
 
-Configure a strong `SESSION_SECRET` for deployments. The built-in in-memory session store is intended for local/student-project use; production deployments should use a persistent session store and HTTPS.
+Configure a strong `SESSION_SECRET` for deployments. Do not deploy the default administrator password; set strong `ADMIN_USERNAME` and `ADMIN_PASSWORD` values before the first startup. The built-in in-memory session store is intended for local/student-project use; production deployments should use a persistent session store and HTTPS.
 
 ## Academic records
 
 - **Programs (`courses`):** program code, name, and department. A student's `courseCode` points to a program. The department is copied onto the student record from the selected program.
-- **Students (`students`):** registration number (`studentId`), name, program code, academic year, email, gender, department, and bcrypt password hash.
+- **Students (`students`):** registration number (`studentId`), name, program code, academic year, email, gender, department, and bcrypt password hash. Self-signups start as pending profiles with only a name, registration number, and password; an administrator must complete the academic details before the student can sign in.
+- **Administrators (`administrators`):** username, name, and bcrypt password hash. The default administrator is seeded on first startup when it does not already exist.
 - **Course units (`courseUnits`):** unit code and name, program code, semester (1–6), and credit units.
 - **Registrations (`registrations`):** student registration number, program code, course unit's MongoDB `_id`, academic year, and semester. A registration links one student to one course unit.
 - **Results (`results`):** registration's MongoDB `_id`, student registration number, grade, grade points, academic year, and semester. Grades map to a five-point scale: A=5, B=4, C=3, D=2, E=1, F=0. GPA and CGPA are credit-weighted.

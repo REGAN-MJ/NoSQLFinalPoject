@@ -10,6 +10,8 @@ const app = express();
 const port = Number(process.env.PORT) || 3000;
 const mongoUri = process.env.MONGODB_URI;
 const databaseName = process.env.DB_NAME || "student_academic_records";
+const defaultAdminUsername = (process.env.ADMIN_USERNAME || "admin").trim().toLowerCase();
+const defaultAdminPassword = process.env.ADMIN_PASSWORD || "admin123";
 // Grades are converted to points so semester GPA and CGPA can be credit-weighted.
 const gradePoints = { A: 5, B: 4, C: 3, D: 2, E: 1, F: 0 };
 // Programs are inserted only when their course codes do not already exist.
@@ -167,10 +169,19 @@ app.post("/api/auth/login", async (req, res, next) => {
     const { role, identifier, password } = req.body || {};
     if (typeof password !== "string" || !password) return res.status(400).json({ error: "Enter your password." });
     if (role === "admin") {
-      const username = process.env.ADMIN_USERNAME || "Admin";
-      const adminPassword = process.env.ADMIN_PASSWORD || "Admin123";
-      if (identifier !== username || password !== adminPassword) return res.status(401).json({ error: "Invalid administrator username or password." });
-      req.session.user = { role: "admin", username };
+      const username = typeof identifier === "string" ? identifier.trim().toLowerCase() : "";
+      const staffNumber = typeof identifier === "string" ? identifier.trim().toUpperCase() : "";
+      const administrator = await req.db.collection("administrators").findOne({
+        $or: [{ username }, { staffNumber }]
+      });
+      if (!administrator || !(await bcrypt.compare(password, administrator.passwordHash))) {
+        return res.status(401).json({ error: "Invalid administrator username or password." });
+      }
+      req.session.user = {
+        role: "admin",
+        username: administrator.username || administrator.staffNumber,
+        fullName: administrator.fullName
+      };
       return res.json({ user: req.session.user });
     }
     if (role !== "student" || typeof identifier !== "string" || !identifier.trim()) {
@@ -180,12 +191,38 @@ app.post("/api/auth/login", async (req, res, next) => {
     const student = await req.db.collection("students").findOne({
       $or: [{ email: lookup.toLowerCase() }, { studentId: lookup.toUpperCase() }]
     });
+    if (student?.signupPending) return res.status(403).json({ error: "Your account is waiting for an administrator to complete your student profile." });
     if (!student?.passwordHash || !(await bcrypt.compare(password, student.passwordHash))) {
       return res.status(401).json({ error: "Invalid student credentials." });
     }
     req.session.user = { role: "student", studentId: student.studentId };
     res.json({ user: { role: "student", studentId: student.studentId, fullName: student.fullName } });
   } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/auth/signup", async (req, res, next) => {
+  try {
+    const { role, fullName, identifier, password, confirmPassword } = req.body || {};
+    if (role !== "student") return res.status(400).json({ error: "Only students can sign up." });
+    const normalizedName = typeof fullName === "string" ? fullName.trim() : "";
+    const accountId = typeof identifier === "string" ? identifier.trim().toUpperCase() : "";
+    if (!normalizedName || normalizedName.length > 100) return res.status(400).json({ error: "Enter your name (up to 100 characters)." });
+    if (!/^[A-Z0-9-]{2,40}$/.test(accountId)) return res.status(400).json({ error: "Enter a valid registration number." });
+    if (typeof password !== "string" || password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters." });
+    if (password !== confirmPassword) return res.status(400).json({ error: "Passwords do not match." });
+    const passwordHash = await bcrypt.hash(password, 12);
+    await req.db.collection("students").insertOne({
+      studentId: accountId,
+      fullName: normalizedName,
+      passwordHash,
+      signupPending: true,
+      createdAt: new Date()
+    });
+    res.status(201).json({ message: "Signup received. An administrator must complete your student profile before you can sign in." });
+  } catch (error) {
+    if (error.code === 11000) return res.status(409).json({ error: "An account with that number already exists." });
     next(error);
   }
 });
@@ -459,6 +496,7 @@ app.put("/api/:resource/:id", async (req, res, next) => {
           return res.status(409).json({ error: "A student's registration number and program cannot change after course registration." });
         }
         record.department = course.department;
+        record.signupPending = false;
         // A blank password on edit means keep the existing hash.
         if (req.body.password) record.passwordHash = await bcrypt.hash(req.body.password, 12);
         else delete record.passwordHash;
@@ -558,7 +596,12 @@ async function start() {
   const client = new MongoClient(mongoUri);
   await client.connect();
   database = client.db(databaseName);
-  const registrationIndexes = await database.collection("registrations").indexes();
+  let registrationIndexes = [];
+  try {
+    registrationIndexes = await database.collection("registrations").indexes();
+  } catch (error) {
+    if (error.code !== 26) throw error;
+  }
   const legacyRegistrationIndex = registrationIndexes.find((index) =>
     index.name === "studentId_1_courseCode_1_academicYear_1_semester_1"
   );
@@ -566,10 +609,25 @@ async function start() {
     // Remove the older registration index so the new course-unit-based rule can be installed.
     await database.collection("registrations").dropIndex(legacyRegistrationIndex.name);
   }
+  let studentIndexes = [];
+  try {
+    studentIndexes = await database.collection("students").indexes();
+  } catch (error) {
+    if (error.code !== 26) throw error;
+  }
+  const legacyEmailIndex = studentIndexes.find((index) =>
+    index.name === "email_1" && !index.partialFilterExpression
+  );
+  if (legacyEmailIndex) await database.collection("students").dropIndex(legacyEmailIndex.name);
   // Indexes prevent duplicate identities, course units, registrations, and results.
   await Promise.all([
     database.collection("students").createIndex({ studentId: 1 }, { unique: true }),
-    database.collection("students").createIndex({ email: 1 }, { unique: true }),
+    database.collection("students").createIndex({ email: 1 }, { unique: true, partialFilterExpression: { email: { $type: "string" } } }),
+    database.collection("administrators").createIndex({ staffNumber: 1 }, { unique: true }),
+    database.collection("administrators").createIndex(
+      { username: 1 },
+      { unique: true, partialFilterExpression: { username: { $type: "string" } } }
+    ),
     database.collection("courses").createIndex({ courseCode: 1 }, { unique: true }),
     database.collection("courseUnits").createIndex({ unitCode: 1, courseCode: 1 }, { unique: true }),
     database.collection("registrations").createIndex(
@@ -579,6 +637,15 @@ async function start() {
     database.collection("results").createIndex({ registrationId: 1 }, { unique: true }),
     database.collection("results").createIndex({ studentId: 1, semester: 1 })
   ]);
+  const administrators = database.collection("administrators");
+  if (!(await administrators.findOne({ username: defaultAdminUsername }))) {
+    await administrators.insertOne({
+      username: defaultAdminUsername,
+      fullName: "Administrator",
+      passwordHash: await bcrypt.hash(defaultAdminPassword, 12),
+      createdAt: new Date()
+    });
+  }
   for (const course of initialCourses) {
     await database.collection("courses").updateOne(
       { courseCode: course.courseCode },

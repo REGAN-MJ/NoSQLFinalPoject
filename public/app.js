@@ -13,7 +13,7 @@ const configurations = {
       { key: "gender", label: "Gender", type: "select", options: ["Male", "Female"] },
       { key: "password", label: "Password", type: "password", placeholder: "At least 8 characters", optionalEdit: true }
     ],
-    columns: [["studentId", "REG. NO."], ["fullName", "STUDENT"], ["email", "EMAIL"], ["courseCode", "PROGRAM"], ["department", "DEPARTMENT"], ["academicYear", "ACADEMIC YEAR"], ["gender", "GENDER"]]
+    columns: [["studentId", "REG. NO."], ["fullName", "STUDENT"], ["signupPending", "ACCOUNT"], ["email", "EMAIL"], ["courseCode", "PROGRAM"], ["department", "DEPARTMENT"], ["academicYear", "ACADEMIC YEAR"], ["gender", "GENDER"]]
   },
   courses: {
     title: "Programs",
@@ -45,6 +45,7 @@ const configurations = {
 const state = {
   user: null,
   role: "student",
+  loginMode: "login",
   records: { students: [], courses: [], courseUnits: [], registrations: [], results: [] },
   registrationOverview: [],
   currentView: "overview",
@@ -96,12 +97,32 @@ function setScreen(screen) {
 
 function setLoginRole(role) {
   state.role = role;
-  document.querySelectorAll(".login-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.loginRole === role));
+  document.querySelectorAll(".login-tab").forEach((tab) => {
+    const active = tab.dataset.loginRole === role;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+  });
   $("#login-identifier-label").textContent = role === "admin" ? "Administrator username" : "Registration number or email";
-  $("#login-identifier").placeholder = role === "admin" ? "Admin" : "e.g. STU001 or student@email.com";
+  $("#login-identifier").placeholder = role === "admin" ? "admin" : "e.g. STU001 or student@email.com";
   $("#login-hint").textContent = role === "admin"
-    ? "Default account: Admin / Admin123. Change these credentials in your environment settings."
+    ? "Use your administrator username and password."
     : "Use your university registration number or email and password.";
+}
+
+function setLoginMode(mode) {
+  state.loginMode = mode;
+  const signingUp = mode === "signup";
+  if (signingUp && state.role !== "student") setLoginRole("student");
+  $("#login-tabs").hidden = signingUp;
+  $("#login-form").hidden = signingUp;
+  $("#signup-form").hidden = !signingUp;
+  $("#login-title").textContent = signingUp ? "Create your account" : "Welcome back";
+  $("#login-subtitle").textContent = signingUp
+    ? "Create a student login. An administrator will complete your academic profile."
+    : "Sign in to view and manage academic records.";
+  $("#login-mode-toggle").textContent = signingUp ? "Already have an account? Sign in" : "Create an account";
+  $("#signup-error").textContent = "";
+  $("#signup-message").textContent = "";
 }
 
 function setToday() {
@@ -138,6 +159,7 @@ function renderOverview() {
 
 function displayRecordValue(resource, key, record) {
   const value = record[key];
+  if (resource === "students" && key === "signupPending") return value ? "Pending profile" : "Active";
   if (value === undefined || value === null || value === "") return "—";
   if (key === "courseCode") return resource === "courseUnits" || resource === "students" ? programName(value) : value;
   if (key === "semester") return `Semester ${value}`;
@@ -500,6 +522,7 @@ async function showUser(user) {
 async function initialize() {
   setToday();
   setLoginRole("student");
+  setLoginMode("login");
   try {
     const { user } = await request("/api/auth/me");
     await showUser(user);
@@ -511,6 +534,7 @@ async function initialize() {
 // Connect forms, navigation, dialogs, and table buttons to their actions/API calls.
 function bindEvents() {
   document.querySelectorAll(".login-tab").forEach((tab) => tab.addEventListener("click", () => setLoginRole(tab.dataset.loginRole)));
+  $("#login-mode-toggle").addEventListener("click", () => setLoginMode(state.loginMode === "login" ? "signup" : "login"));
   $("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     $("#login-error").textContent = "";
@@ -530,12 +554,45 @@ function bindEvents() {
       submit.textContent = "Sign in";
     }
   });
+  $("#signup-form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    $("#signup-error").textContent = "";
+    $("#signup-message").textContent = "";
+    const password = $("#signup-password").value;
+    if (password !== $("#signup-confirm-password").value) {
+      $("#signup-error").textContent = "Passwords do not match.";
+      return;
+    }
+    const submit = $("#signup-submit");
+    submit.disabled = true;
+    submit.textContent = "Creating account…";
+    try {
+      const { message } = await request("/api/auth/signup", {
+        method: "POST",
+        body: JSON.stringify({
+          role: "student",
+          fullName: $("#signup-name").value.trim(),
+          identifier: $("#signup-identifier").value.trim(),
+          password,
+          confirmPassword: $("#signup-confirm-password").value
+        })
+      });
+      $("#signup-message").textContent = message;
+      $("#signup-form").reset();
+    } catch (error) {
+      $("#signup-error").textContent = error.message;
+    } finally {
+      submit.disabled = false;
+      submit.textContent = "Create account";
+    }
+  });
 
   document.querySelectorAll("[data-logout]").forEach((button) => button.addEventListener("click", async () => {
     try {
       await request("/api/auth/logout", { method: "POST" });
       state.user = null;
       $("#login-form").reset();
+      setLoginMode("login");
       setScreen("login");
     } catch (error) {
       toast(error.message, true);
