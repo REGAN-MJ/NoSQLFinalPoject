@@ -1,0 +1,52 @@
+Lets modify the system to a proper university academic results portal
+ ADD STUDENT FORM
+     Course (Drop Down of available courses)
+     Academic Year
+     Password
+     Reg No.
+     Email
+     Gender Male/Female
+     Department shoud be added on the students table automatically depending on the students Course
+    
+Courses
+     Software Engineering - DEPT - COMPUTING & INFORMATICS
+     Computer Science -DEPT- COMPUTING & INFORMATICS
+     Business Administration -DEPT- BUSINESS SCHOOL
+     Human Resource Management -DEPT- BUSINESS SCHOOL
+   Also with a form for adding more courses
+
+Registration
+    This should contain  list of added students showing the semister and course units to which they  are registered
+    if they are already registered, and showing Not registered if not yet
+    The registration form appears after clicking Register button thats at the end of that student row
+      Registration Form
+          SEMESTER 1
+          course units get listed automatically From the database
+          Confirm Registration 
+          SEMESTER 2 Upto sem 6 each having the relevant course units
+
+    If a student has already got marks for sem1 it should be greyed out during registration    
+
+Results 
+     This Should show the student name, dept and course , Number of semesters finished ,
+     and with there CGPA sofar 
+     then having a button for more details on a student having;
+         each semester covered, with its course units results A B etc and points plus GPAfor each semester
+  results should be editable
+
+The form for adding results should have dropdown of registered students then course auto filled 
+and 
+and also the Registered SEM auto filled
+and also The course units auto filled then on the there right having in put for the Students' Grade
+
+ALSO add login for students and admin
+students USE email or REG No. plus password
+  the students only view theire respective academic results and progress towards completion plus graph analytics of there performance over the semesters
+Admin uses Admin and password Admin123
+
+     
+         
+
+     
+  
+    

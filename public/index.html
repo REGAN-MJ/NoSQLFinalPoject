@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f7fb">
+    <title>University Academic Results Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <!-- Login screen: the selected role changes which account credentials are requested. -->
+    <section class="login-screen" id="login-screen" hidden>
+      <div class="login-card">
+        <a class="brand login-brand" href="#"><span class="brand-mark">C</span><span>campus<span class="brand-light">desk</span></span></a>
+        <div class="eyebrow">UNIVERSITY ACADEMIC PORTAL</div>
+        <h1>Welcome back</h1>
+        <p class="page-subtitle">Sign in to view and manage academic records.</p>
+        <div class="login-tabs" role="tablist">
+          <button type="button" class="login-tab active" data-login-role="student">Student</button>
+          <button type="button" class="login-tab" data-login-role="admin">Administrator</button>
+        </div>
+        <form id="login-form">
+          <label class="login-label" id="login-identifier-label" for="login-identifier">Registration number or email</label>
+          <input class="login-input" id="login-identifier" autocomplete="username" required placeholder="e.g. STU001 or student@email.com">
+          <label class="login-label" for="login-password">Password</label>
+          <input class="login-input" id="login-password" type="password" autocomplete="current-password" required placeholder="Enter your password">
+          <div class="form-error" id="login-error" role="alert"></div>
+          <button class="button button-primary login-submit" id="login-submit" type="submit">Sign in</button>
+        </form>
+        <p class="login-hint" id="login-hint">Use your university registration number or email and password.</p>
+      </div>
+    </section>
+
+    <!-- Administrator workspace: sidebar navigation controls the dashboard sections below. -->
+    <div class="app-shell" id="admin-app" hidden>
+      <aside class="sidebar">
+        <a class="brand" href="#"><span class="brand-mark">C</span><span>campus<span class="brand-light">desk</span></span></a>
+        <div class="workspace-label">ADMIN WORKSPACE</div>
+        <nav class="navigation" aria-label="Main navigation">
+          <button class="nav-link active" data-view="overview"><span class="nav-icon">⌂</span>Overview</button>
+          <div class="nav-caption">ACADEMIC RECORDS</div>
+          <button class="nav-link" data-view="students"><span class="nav-icon">♙</span>Students <span class="nav-count" id="count-students">0</span></button>
+          <button class="nav-link" data-view="courses"><span class="nav-icon">▤</span>Programs <span class="nav-count" id="count-courses">0</span></button>
+          <button class="nav-link" data-view="courseUnits"><span class="nav-icon">▥</span>Course units <span class="nav-count" id="count-courseUnits">0</span></button>
+          <button class="nav-link" data-view="registrations"><span class="nav-icon">↗</span>Registrations</button>
+          <button class="nav-link" data-view="results"><span class="nav-icon">▣</span>Results</button>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="database-status"><span class="status-dot"></span><span><strong>Connecting to database</strong><small>Checking MongoDB</small></span></div>
+          <div class="profile"><div class="avatar">AD</div><span><strong id="admin-name">Administrator</strong><small>Records manager</small></span></div>
+        </div>
+      </aside>
+      <main class="main-content">
+        <header class="topbar"><div class="breadcrumbs">Workspace <span>/</span> <strong id="breadcrumb-current">Overview</strong></div><div class="topbar-right"><span class="today" id="today"></span><button class="button button-secondary logout-button" data-logout>Sign out</button></div></header>
+        <section class="page-content">
+          <!-- Overview with totals and the recommended setup sequence. -->
+          <section id="overview-view">
+            <div class="welcome-row"><div><div class="eyebrow">ACADEMIC MANAGEMENT</div><h1>Academic results portal</h1><p class="page-subtitle">Manage students, six-semester registrations, and academic progress.</p></div><button class="button button-primary" id="quick-add">＋ Add student</button></div>
+            <div class="stat-grid">
+              <article class="stat-card"><div class="stat-top"><span class="stat-label">Total students</span><span class="stat-icon icon-lilac">♙</span></div><div class="stat-value" id="stat-students">0</div><div class="stat-note">Student records</div></article>
+              <article class="stat-card"><div class="stat-top"><span class="stat-label">Programs</span><span class="stat-icon icon-blue">▤</span></div><div class="stat-value" id="stat-courses">0</div><div class="stat-note">Available programs</div></article>
+              <article class="stat-card"><div class="stat-top"><span class="stat-label">Course units</span><span class="stat-icon icon-green">▥</span></div><div class="stat-value" id="stat-courseUnits">0</div><div class="stat-note">Semester curriculum</div></article>
+              <article class="stat-card"><div class="stat-top"><span class="stat-label">Results recorded</span><span class="stat-icon icon-amber">▣</span></div><div class="stat-value" id="stat-results">0</div><div class="stat-note">Student assessments</div></article>
+            </div>
+            <section class="panel collections-panel"><div class="panel-heading"><div><h2>Getting started</h2><p>Set up curriculum units before registering students each semester.</p></div></div><div class="setup-note"><strong>Suggested workflow</strong><span>1. Create a student and assign a program.</span><span>2. Add course units to each program and semester (1–6).</span><span>3. Register students, then enter grades for registered units.</span></div></section>
+          </section>
+
+          <!-- Shared CRUD table for students, programs, and course units. -->
+          <section id="records-view" hidden>
+            <div class="records-heading"><div><div class="eyebrow">ACADEMIC MANAGEMENT</div><h1 id="records-title"></h1><p class="page-subtitle" id="records-description"></p></div><button class="button button-primary" id="add-record">＋ Add record</button></div>
+            <section class="panel records-panel"><div class="records-toolbar"><div class="record-total"><strong id="record-total">0</strong> records</div><label class="search-box"><span>⌕</span><input id="search-input" type="search" placeholder="Search records..." aria-label="Search records"></label></div><div class="table-wrap records-table-wrap"><table><thead id="records-head"></thead><tbody id="records-body"></tbody></table></div><div class="empty-state" id="empty-state" hidden><div class="empty-icon">⌕</div><h3>No records found</h3><p>Try a different search or add your first record.</p><button class="button button-primary" id="empty-add">＋ Add a record</button></div></section>
+          </section>
+
+          <!-- Registration overview lists a student's status in semesters 1 through 6. -->
+          <section id="registrations-view" hidden>
+            <div class="records-heading"><div><div class="eyebrow">SIX-SEMESTER PROGRAM</div><h1>Student registrations</h1><p class="page-subtitle">Review enrollment by semester and register each student for their program units.</p></div></div>
+            <section class="panel records-panel"><div class="records-toolbar"><div class="record-total"><strong id="registration-total">0</strong> students</div><label class="search-box"><span>⌕</span><input id="registration-search" type="search" placeholder="Search students..." aria-label="Search students"></label></div><div class="table-wrap"><table class="wide-table"><thead><tr><th>STUDENT</th><th>PROGRAM / DEPARTMENT</th><th>SEMESTERS 1–6</th><th>ACTION</th></tr></thead><tbody id="registration-body"></tbody></table></div><div class="empty-state" id="registration-empty" hidden><h3>No students yet</h3><p>Add student profiles before registering courses.</p></div></section>
+          </section>
+
+          <!-- Results summary shows semester completion, CGPA, and transcript details. -->
+          <section id="results-view" hidden>
+            <div class="records-heading"><div><div class="eyebrow">ACADEMIC PERFORMANCE</div><h1>Student results</h1><p class="page-subtitle">Record grades for registered units and review progress by semester.</p></div><button class="button button-primary" id="add-result">＋ Add result</button></div>
+            <section class="panel records-panel"><div class="records-toolbar"><div class="record-total"><strong id="results-student-total">0</strong> students</div><label class="search-box"><span>⌕</span><input id="results-search" type="search" placeholder="Search students..." aria-label="Search students"></label></div><div class="table-wrap"><table class="wide-table"><thead><tr><th>STUDENT</th><th>DEPARTMENT / PROGRAM</th><th>SEMESTERS FINISHED</th><th>CGPA</th><th>DETAILS</th></tr></thead><tbody id="results-students-body"></tbody></table></div><div class="empty-state" id="results-empty" hidden><h3>No students or results yet</h3><p>Create student profiles and record results to see progress here.</p></div></section>
+          </section>
+        </section>
+        <footer class="footer"><span>University Academic Results Portal</span><span>CampusDesk</span></footer>
+      </main>
+    </div>
+
+    <!-- Student-only portal: identity and progress come from the authenticated session. -->
+    <main class="student-portal" id="student-app" hidden>
+      <header class="student-topbar"><a class="brand" href="#"><span class="brand-mark">C</span><span>campus<span class="brand-light">desk</span></span></a><span id="student-top-name"></span><button class="button button-secondary" data-logout>Sign out</button></header>
+      <div class="student-content"><div class="eyebrow">MY ACADEMIC RECORD</div><h1 id="student-welcome">My academic progress</h1><p class="page-subtitle" id="student-course"></p>
+        <div class="stat-grid student-stats">
+          <article class="stat-card"><div class="stat-label">Current CGPA</div><div class="stat-value" id="student-cgpa">—</div><div class="stat-note">Weighted grade point average (out of 5)</div></article>
+          <article class="stat-card"><div class="stat-label">Semesters finished</div><div class="stat-value" id="student-semesters">0 / 6</div><div class="stat-note">Semesters with all registered grades</div></article>
+          <article class="stat-card"><div class="stat-label">Completion progress</div><div class="stat-value" id="student-completion">0%</div><div class="progress-track"><span id="completion-bar"></span></div></article>
+          <article class="stat-card"><div class="stat-label">Credits earned</div><div class="stat-value" id="student-credits">0</div><div class="stat-note" id="student-total-credits">Curriculum credit units</div></article>
+        </div>
+        <section class="panel analytics-panel"><div class="panel-heading"><div><h2>Semester performance</h2><p>Grade point average by semester</p></div></div><div class="chart-wrap"><canvas id="performance-chart" aria-label="Semester GPA chart"></canvas></div></section>
+        <section class="panel collections-panel"><div class="panel-heading"><div><h2>Semester results</h2><p>Course unit grades and semester GPA</p></div></div><div id="student-semester-details"></div></section>
+      </div>
+    </main>
+
+    <!-- Dialog reused for adding/editing records and adding/editing result grades. -->
+    <div class="modal-backdrop" id="modal-backdrop" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-header"><div><div class="eyebrow">RECORD DETAILS</div><h2 id="modal-title">Add record</h2></div><button class="close-button" data-close-modal aria-label="Close dialog">×</button></div><p class="modal-description" id="modal-description"></p><form id="record-form"><div class="form-grid" id="form-fields"></div><div class="form-error" id="form-error" role="alert"></div><div class="modal-actions"><button type="button" class="button button-secondary" data-close-modal>Cancel</button><button type="submit" class="button button-primary" id="save-button">Save record</button></div></form></section></div>
+    <!-- Semester registration dialog; the unit list is populated for the chosen student/semester. -->
+    <div class="modal-backdrop" id="registration-modal" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="registration-modal-title"><div class="modal-header"><div><div class="eyebrow">SEMESTER ENROLLMENT</div><h2 id="registration-modal-title">Register student</h2></div><button class="close-button" data-close-registration aria-label="Close dialog">×</button></div><p class="modal-description" id="registration-student-name"></p><form id="registration-form"><div class="form-grid"><div class="form-field"><label for="register-semester">Semester</label><select id="register-semester" required></select></div><div class="form-field"><label for="register-year">Academic year</label><input id="register-year" placeholder="e.g. 2025/2026" required></div></div><div id="unit-checklist" class="unit-checklist"></div><div class="form-error" id="registration-error" role="alert"></div><div class="modal-actions"><button type="button" class="button button-secondary" data-close-registration>Cancel</button><button type="submit" class="button button-primary" id="confirm-registration">Confirm registration</button></div></form></section></div>
+    <!-- Transcript dialog with per-unit grades and grade-edit buttons. -->
+    <div class="modal-backdrop" id="student-details-modal" hidden><section class="modal details-modal" role="dialog" aria-modal="true" aria-labelledby="details-title"><div class="modal-header"><div><div class="eyebrow">ACADEMIC TRANSCRIPT</div><h2 id="details-title">Student results</h2></div><button class="close-button" data-close-details aria-label="Close dialog">×</button></div><div id="details-content"></div></section></div>
+    <div class="toast" id="toast" role="status"></div>
+  </body>
+</html>
